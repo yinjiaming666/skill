@@ -16,8 +16,10 @@ description: 辅助基于 ThinkPHP 框架的项目开发，涵盖 MySQL 数据�
   - **严禁**在命名中使用拼音或拼音缩写。
 - **代码风格**: 严格遵循 [PSR-12](https://www.php-fig.org/psr/psr-12/) 编码规范。
 - **类型声明**:
+  - **严禁**使用 `mixed` 类型，必须明确变量的具体类型。
+  - 类的属性**必须**进行强类型声明，以保障数据结构的确定性。示例：`public array $user;`
   - 所有的类方法与函数**必须**显式声明参数类型与返回值类型。
-  - 若方法无返回值，则必须显式声明为 `: void`。示例：`public function getUserInfo(int $userId): array`
+  - 若方法无返回值，则必须显式声明为 `:void`，以提升代码的严谨性与可读性。示例：`public function getUserInfo(int $userId): array`
 - **严格比较**:
   - 条件判断必须使用强类型比较运算符 `===` 或 `!==`，杜绝隐式类型转换带来的逻辑漏洞。
 - **变量与方法注释 (PHPDoc)**:
@@ -41,6 +43,9 @@ description: 辅助基于 ThinkPHP 框架的项目开发，涵盖 MySQL 数据�
 - **Redis Key 管理**:
   - 系统中所有的 Redis 键名（Key）必须**集中、统一**地定义在 `app/common/logic/KeyUtils.php` 文件中。
   - **绝对禁止**在控制器、业务逻辑或视图代码中硬编码 Redis 键名。
+- **常量与密钥管理**:
+  - 系统中所有的业务常量、第三方服务密钥等配置，必须**集中、统一**地定义在 `app/common/logic/ConstUtils.php` 文件中，禁止在业务代码中散落硬编码。
+  - 各类安全证书文件（如支付证书、加密公私钥等），必须规范存放在 `app/common/cert` 目录下。
 
 ## 3. 数据库与模型 (MySQL)
 

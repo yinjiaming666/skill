@@ -22,16 +22,19 @@ description: "提供关于 CSS 和 SCSS 编写的最佳实践和规范。当涉�
 - **CSS 背景优先**：无特殊情况，背景图**必须使用 CSS `background-image` 实现**，严禁使用绝对定位的 `<img>` 标签作为底层背景。
 - **背景属性控制**：配合使用 `background-size: cover` 或 `contain`，以及 `background-position: center` 等属性来精准控制背景图的显示效果与响应式适配。
 
+## 4. 资源与路径命名规范
+- **禁用中文路径**：所有的文件路径、图片资源名称、路由引入路径等**严禁出现中文**，必须使用小写英文、数字和中划线（kebab-case）进行规范命名。
+
 ---
 
 ## 代码示例 (Examples)
 
 ### ❌ 错误示例 (Bad)
-不推荐的标签滥用、冗余的 margin 居中以及 `<img>` 标签背景垫底：
+不推荐的标签滥用、冗余的 margin 居中、`<img>` 标签背景垫底以及包含中文的路径：
 
 ```html
 <div class="card-container">
-    <img class="bg-img" src="bg.png" alt="background" />
+    <img class="bg-img" src="assets/images/背景图.png" alt="background" />
     <h2>核心优势</h2>
     <ul>
         <li class="item">优势一</li>
@@ -66,7 +69,7 @@ description: "提供关于 CSS 和 SCSS 编写的最佳实践和规范。当涉�
 ```
 
 ### ✅ 正确示例 (Good)
-使用纯净的 `<div>` 和 `<span>`，结合 Flexbox 布局与 `gap` 间距，并使用 `background-image`：
+使用纯净的 `<div>` 和 `<span>`，结合 Flexbox 布局与 `gap` 间距，并使用 `background-image` 及纯英文规范路径：
 
 ```html
 <div class="card-container">
@@ -85,7 +88,7 @@ description: "提供关于 CSS 和 SCSS 编写的最佳实践和规范。当涉�
   align-items: center; // ✅ 推荐：使用 Flex 居中对齐
   gap: 20px; // ✅ 推荐：使用 gap 控制间距
 
-  background-image: url('bg.png'); // ✅ 推荐：使用 CSS 背景图
+  background-image: url('assets/images/background.png'); // ✅ 推荐：使用 CSS 背景图及规范的英文路径
   background-size: cover;
   background-position: center;
 

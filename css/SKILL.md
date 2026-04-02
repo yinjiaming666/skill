@@ -1,91 +1,108 @@
 ---
 name: "css-scss-guidelines"
-description: "提供关于 CSS 和 SCSS 编写的最佳实践和规范。当用户涉及前端样式编写、布局调整、组件样式重构时触发此技能。"
+description: "提供关于 CSS 和 SCSS 编写的最佳实践和规范。当涉及前端样式编写、布局调整、组件样式重构时，请触发并遵循此技能。"
 ---
 
 # CSS & SCSS 编写规范 (CSS & SCSS Guidelines)
 
-在进行前端样式编写时，请严格遵循以下规范：
+在进行前端样式编写与组件重构时，请务必严格遵循以下核心规范，以确保代码的统一性、可维护性及纯净的 DOM 结构。
 
-## 1. HTML 标签使用
-- 默认情况下，**文字只能使用 `<span>` 标签** 进行包裹。
-- 除非有明确的语义化或 SEO 需求，**不得使用 `<h>` 标签 (h1-h6) 或 `<p>` 标签**。
-- **无特殊情况，不要使用 `<li>`、`<ul>`、`<ol>`、`<table>` 等带有默认样式的 HTML 标签**。推荐使用 `<div>` 和 `<span>` 配合 CSS 来实现列表和表格布局，以避免默认样式带来的干扰。
+## 1. 语义化与 HTML 标签约束
+- **文本专属标签**：默认情况下，所有纯文本内容**必须**使用 `<span>` 标签进行包裹。
+- **禁用默认块级标签**：除非有明确的 SEO 或强语义化需求，**严禁使用 `<h1-h6>` 或 `<p>` 标签**。
+- **禁用原生列表与表格标签**：无特殊情况，**禁止使用 `<li>`、`<ul>`、`<ol>`、`<table>` 等带有浏览器默认样式的标签**。推荐完全使用 `<div>` 和 `<span>` 配合 CSS（如 Flexbox/Grid）来实现列表与表格布局，彻底消除默认样式干扰。
 
-## 2. 布局与对齐方式
-- 当需要进行元素的对齐或居中操作时，**优先使用 Flexbox 布局** (`display: flex`)。
-- 尽量避免使用绝对定位 (`position: absolute`) 加负 `margin` 或 `transform` 的方式进行居中，除非特殊场景（如悬浮图标、弹窗等）。
+## 2. 布局与对齐原则
+- **Flexbox 优先**：进行元素排列、对齐或居中操作时，**必须优先采用 Flexbox 布局** (`display: flex`)。
+- **间距控制**：**强制使用 `gap` 属性** 来控制 Flex 容器内子元素的间距，尽量避免使用 `margin` 或 `padding` 来处理兄弟元素间的空隙。
+- **对齐限制**：无特殊情况，**严禁使用 `margin: auto`** 的方式进行对齐或居中。
+- **慎用绝对定位**：尽量避免使用绝对定位 (`position: absolute`) 配合负 `margin` 或 `transform` 进行居中，除非是特定的脱离文档流场景（如悬浮徽标、弹窗、Tooltip 等）。
 
-## 3. 背景图处理
-- **无特殊情况，背景图优先使用 CSS `background-image` 实现**，而不是使用绝对定位的 `<img>` 标签垫底。
-- 配合使用 `background-size: cover` / `contain` 以及 `background-position` 来控制背景图显示效果。
+## 3. 背景图处理规范
+- **CSS 背景优先**：无特殊情况，背景图**必须使用 CSS `background-image` 实现**，严禁使用绝对定位的 `<img>` 标签作为底层背景。
+- **背景属性控制**：配合使用 `background-size: cover` 或 `contain`，以及 `background-position: center` 等属性来精准控制背景图的显示效果与响应式适配。
 
-## 4. SCSS 嵌套深度
-- 编写 SCSS 时，要保持代码的扁平化，避免过度嵌套导致选择器优先级过高且难以维护。
-- **SCSS 嵌套尽量不超过 3 层**。如果发现嵌套过深，应考虑通过合理的类名命名（如 BEM 规范）来提取和扁平化样式。
+---
 
-## 示例
+## 代码示例 (Examples)
 
-**❌ 错误示例 (Bad):**
+### ❌ 错误示例 (Bad)
+不推荐的标签滥用、冗余的 margin 居中以及 `<img>` 标签背景垫底：
+
 ```html
-<!-- 不推荐的标签及使用 img 作为背景 -->
-<div class="card">
-  <img class="bg" src="bg.png"  alt=""/>
-  <h2>标题</h2>
-  <ul>
-    <li>列表项1</li>
-  </ul>
+<div class="card-container">
+    <img class="bg-img" src="bg.png" alt="background" />
+    <h2>核心优势</h2>
+    <ul>
+        <li class="item">优势一</li>
+        <li class="item">优势二</li>
+    </ul>
 </div>
 ```
+
 ```scss
-// 嵌套过深，使用 img 做背景
-.card {
+.card-container {
   position: relative;
-  .bg {
+  margin: auto; // ❌ 违规：使用 margin: auto 对齐
+
+  .bg-img { // ❌ 违规：使用 img 标签作为背景
     position: absolute;
     width: 100%;
     height: 100%;
+    z-index: -1;
   }
-  .card-header {
-    .title-wrapper {
-      h2 {
-        color: red;
-      }
+
+  h2 { // ❌ 违规：使用了 h 标签
+    color: #333;
+    margin-bottom: 20px; // ❌ 违规：使用 margin 控制间距
+  }
+
+  ul { // ❌ 违规：使用了自带样式的列表标签
+    li.item {
+      font-size: 14px;
     }
   }
 }
 ```
 
-**✅ 正确示例 (Good):**
+### ✅ 正确示例 (Good)
+使用纯净的 `<div>` 和 `<span>`，结合 Flexbox 布局与 `gap` 间距，并使用 `background-image`：
+
 ```html
-<!-- 推荐的结构：纯净标签，背景由 CSS 控制 -->
-<div class="card">
-  <span class="card-title">标题</span>
-  <div class="list">
-    <span class="list-item">列表项1</span>
-  </div>
+<div class="card-container">
+    <span class="card-title">核心优势</span>
+    <div class="card-list">
+        <span class="list-item">优势一</span>
+        <span class="list-item">优势二</span>
+    </div>
 </div>
 ```
+
 ```scss
-// 扁平化嵌套，Flex 居中，使用 background-image
-.card {
+.card-container {
   display: flex;
   flex-direction: column;
-  align-items: center; // Flex 居中
-  background-image: url('bg.png');
+  align-items: center; // ✅ 推荐：使用 Flex 居中对齐
+  gap: 20px; // ✅ 推荐：使用 gap 控制间距
+
+  background-image: url('bg.png'); // ✅ 推荐：使用 CSS 背景图
   background-size: cover;
   background-position: center;
 
   .card-title {
-    color: red;
+    color: #333;
+    font-size: 24px;
+    font-weight: bold;
   }
 
-  .list {
+  .card-list {
     display: flex;
     flex-direction: column;
+    gap: 10px; // ✅ 推荐：使用 gap 控制列表间距
 
     .list-item {
       font-size: 14px;
+      color: #666;
     }
   }
 }

@@ -5,12 +5,25 @@ description: 通过 remote-mysql.sh 连接线上 MySQL 数据库，SELECT 类查
 
 # 远程 MySQL 数据库操作
 
-通过 `remote-mysql.sh` 脚本建立 SSH 隧道，连接线上 MySQL 数据库 (`server`) 并执行 SQL。
+通过 `.trae/remote-mysql.sh` 脚本建立 SSH 隧道，连接线上 MySQL 数据库并执行 SQL。
 
-## 执行脚本路径
+## 脚本准备
+
+每次执行前先检查脚本是否存在，若不存在则自动下载：
+
+```bash
+if [[ ! -f .trae/remote-mysql.sh ]]; then
+    mkdir -p .trae
+    curl -fsSL -o .trae/remote-mysql.sh \
+        https://raw.githubusercontent.com/yinjiaming666/skill/refs/heads/main/remote-mysql/remote-mysql.sh
+    chmod +x .trae/remote-mysql.sh
+fi
+```
+
+执行方式：
 
 ```
-bash /Users/yin/pro/mix/encrypty_usb/scripts/remote-mysql.sh
+bash .trae/remote-mysql.sh
 ```
 
 脚本默认连接 `server` 数据库。如需指定其他数据库，使用 `-d <dbname>`。
@@ -43,7 +56,6 @@ bash /Users/yin/pro/mix/encrypty_usb/scripts/remote-mysql.sh
 - 任何未在上述列表中且可能修改数据的 SQL
 
 确认流程：
-
 1. 向用户展示即将执行的 SQL 语句
 2. 说明该操作的影响（涉及的表、行数估算等）
 3. 要求用户输入 `wq` 确认
@@ -51,7 +63,7 @@ bash /Users/yin/pro/mix/encrypty_usb/scripts/remote-mysql.sh
 
 ## SQL 日志记录
 
-每次执行的 SQL 和输出结果**必须**追加记录到项目根目录的 `.trae/auto_change.sql` 文件中。
+每次执行的 SQL 和输出结果**必须**追加记录到 `.trae/auto_change.sql` 文件中。
 
 日志格式：
 
@@ -77,13 +89,10 @@ bash /Users/yin/pro/mix/encrypty_usb/scripts/remote-mysql.sh
 -- Query OK, 1 row affected (0.01 sec)
 ```
 
-日志文件路径: `/Users/yin/pro/mix/encrypty_usb/scripts/.trae/auto_change.sql`
-
 记录步骤：
-
 1. 执行 SQL
 2. 将原始 SQL、执行时间戳、类型标签、输出结果按上述格式写入 `.trae/auto_change.sql`
-3. 确保目录 `.trae/` 存在
+3. 确保 `.trae/` 目录存在
 
 ## 使用示例
 

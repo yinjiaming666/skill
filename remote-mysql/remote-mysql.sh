@@ -8,30 +8,72 @@
 #   ./remote-mysql.sh "SELECT 1"               执行单条 SQL
 #   ./remote-mysql.sh -f ./migration.sql       执行 SQL 文件
 #   ./remote-mysql.sh -d mydb "SHOW TABLES"    指定数据库
+#
+# 直连模式:
+#   ./remote-mysql.sh --direct                 不走 SSH，直接连接 MySQL
+#   ./remote-mysql.sh --direct "SELECT 1"      直连执行单条 SQL
 
 set -euo pipefail
 
 # ============================================================
-# SSH 连接配置
+# 连接模式（建议直接在此处配置）
 # ============================================================
-SSH_HOST=""
-SSH_PORT="22"
-SSH_USER="root"
-SSH_PASS=""          # 留空则尝试使用 SSH key 认证
+# tunnel: 通过 SSH 隧道连接（默认）
+# direct: 直接连接 MySQL（不走 SSH）
+#
+# 说明:
+# - 默认请直接修改 *_DEFAULT 变量，把直连/隧道开关、IP/用户名/密码写在脚本里
+# - 仍然保留环境变量覆盖能力（例如 CI 或临时切换环境时）
+# - 不建议把真实密码提交到 Git（可只在本地改或用环境变量覆盖）
+MYSQL_CONNECT_MODE_DEFAULT="tunnel"
+
+# ============================================================
+# SSH 连接配置（仅 tunnel 模式需要）
+# ============================================================
+SSH_HOST_DEFAULT=""
+SSH_PORT_DEFAULT="22"
+SSH_USER_DEFAULT="root"
+SSH_PASS_DEFAULT=""          # 留空则尝试使用 SSH key 认证
 
 # ============================================================
 # MySQL 连接配置（远程服务器上的 MySQL）
 # ============================================================
-MYSQL_HOST=""   # 通常远程 MySQL 监听在 127.0.0.1
-MYSQL_PORT="3306"
-MYSQL_USER=""
-MYSQL_PASS=""
-MYSQL_DB=""              # 默认库，可留空
+MYSQL_HOST_DEFAULT=""   # tunnel: 远端 MySQL 主机（通常为 127.0.0.1）；direct: MySQL 主机/IP
+MYSQL_PORT_DEFAULT="3306"
+MYSQL_USER_DEFAULT=""
+MYSQL_PASS_DEFAULT=""   # 可直接写在脚本里；留空则 mysql 会提示输入密码
+MYSQL_DB_DEFAULT=""     # 默认库，可留空
+
+# 直连示例（把下面改成你的真实配置即可）:
+# MYSQL_CONNECT_MODE_DEFAULT="direct"
+# MYSQL_HOST_DEFAULT="127.0.0.1"
+# MYSQL_PORT_DEFAULT="3306"
+# MYSQL_USER_DEFAULT="root"
+# MYSQL_PASS_DEFAULT="your_password"
+# MYSQL_DB_DEFAULT="server"
 
 # ============================================================
 # 本地隧道端口（一般无需修改）
 # ============================================================
-LOCAL_PORT="3307"
+LOCAL_PORT_DEFAULT="3307"
+
+# ============================================================
+# 运行时配置（可用环境变量覆盖 *_DEFAULT）
+# ============================================================
+MYSQL_CONNECT_MODE="${MYSQL_CONNECT_MODE:-$MYSQL_CONNECT_MODE_DEFAULT}"
+
+SSH_HOST="${SSH_HOST:-$SSH_HOST_DEFAULT}"
+SSH_PORT="${SSH_PORT:-$SSH_PORT_DEFAULT}"
+SSH_USER="${SSH_USER:-$SSH_USER_DEFAULT}"
+SSH_PASS="${SSH_PASS:-$SSH_PASS_DEFAULT}"
+
+MYSQL_HOST="${MYSQL_HOST:-$MYSQL_HOST_DEFAULT}"
+MYSQL_PORT="${MYSQL_PORT:-$MYSQL_PORT_DEFAULT}"
+MYSQL_USER="${MYSQL_USER:-$MYSQL_USER_DEFAULT}"
+MYSQL_PASS="${MYSQL_PASS:-$MYSQL_PASS_DEFAULT}"
+MYSQL_DB="${MYSQL_DB:-$MYSQL_DB_DEFAULT}"
+
+LOCAL_PORT="${LOCAL_PORT:-$LOCAL_PORT_DEFAULT}"
 
 # ============================================================
 # 颜色输出
@@ -58,16 +100,29 @@ trap cleanup EXIT
 # ============================================================
 check_config() {
     local missing=()
-    [[ -z "$SSH_HOST" ]]   && missing+=("SSH_HOST")
-    [[ -z "$SSH_USER" ]]   && missing+=("SSH_USER")
+
+    if [[ "$MYSQL_CONNECT_MODE" == "tunnel" ]]; then
+        [[ -z "$SSH_HOST" ]] && missing+=("SSH_HOST")
+        [[ -z "$SSH_USER" ]] && missing+=("SSH_USER")
+        [[ -z "$MYSQL_HOST" ]] && MYSQL_HOST="127.0.0.1"
+    elif [[ "$MYSQL_CONNECT_MODE" == "direct" ]]; then
+        [[ -z "$MYSQL_HOST" ]] && missing+=("MYSQL_HOST")
+    else
+        log_error "未知 MYSQL_CONNECT_MODE: $MYSQL_CONNECT_MODE (仅支持 tunnel/direct)"
+        exit 1
+    fi
+
     [[ -z "$MYSQL_USER" ]] && missing+=("MYSQL_USER")
-    [[ -z "$MYSQL_PASS" ]] && missing+=("MYSQL_PASS")
 
     if [[ ${#missing[@]} -gt 0 ]]; then
-        log_error "以下配置项未填写，请编辑脚本填写:"
+        log_error "以下配置项未填写，请在脚本顶部填写对应 *_DEFAULT（或用环境变量/参数传入）:"
         for m in "${missing[@]}"; do
             echo "  - $m"
         done
+        echo ""
+        log_info "也可通过环境变量或参数传入配置（示例）:"
+        echo "  MYSQL_CONNECT_MODE=direct MYSQL_HOST=127.0.0.1 MYSQL_USER=root bash $0"
+        echo "  bash $0 --direct --mysql-host 127.0.0.1 --mysql-user root"
         exit 1
     fi
 }
@@ -112,14 +167,27 @@ start_tunnel() {
 }
 
 # ============================================================
-# 构建 mysql 客户端命令
+# 构建 mysql 客户端参数
 # ============================================================
-build_mysql_cmd() {
-    local cmd="mysql -h 127.0.0.1 -P $LOCAL_PORT -u $MYSQL_USER"
-    cmd+=" -p\"$MYSQL_PASS\""
-    [[ -n "$MYSQL_DB" ]] && cmd+=" $MYSQL_DB"
-    cmd+=" --default-character-set=utf8mb4"
-    echo "$cmd"
+build_mysql_args() {
+    local host=""
+    local port=""
+
+    if [[ "$MYSQL_CONNECT_MODE" == "tunnel" ]]; then
+        host="127.0.0.1"
+        port="$LOCAL_PORT"
+    else
+        host="$MYSQL_HOST"
+        port="$MYSQL_PORT"
+    fi
+
+    MYSQL_ARGS=(mysql -h "$host" -P "$port" -u "$MYSQL_USER" --default-character-set=utf8mb4)
+    if [[ -n "$MYSQL_PASS" ]]; then
+        MYSQL_ARGS+=("-p$MYSQL_PASS")
+    else
+        MYSQL_ARGS+=("-p")
+    fi
+    [[ -n "$MYSQL_DB" ]] && MYSQL_ARGS+=("$MYSQL_DB")
 }
 
 # ============================================================
@@ -127,9 +195,8 @@ build_mysql_cmd() {
 # ============================================================
 run_sql() {
     local sql="$1"
-    local mysql_cmd
-    mysql_cmd="$(build_mysql_cmd)"
-    echo "$sql" | eval "$mysql_cmd"
+    build_mysql_args
+    printf '%s\n' "$sql" | "${MYSQL_ARGS[@]}"
 }
 
 run_sql_file() {
@@ -139,9 +206,8 @@ run_sql_file() {
         exit 1
     fi
     log_info "执行 SQL 文件: $file"
-    local mysql_cmd
-    mysql_cmd="$(build_mysql_cmd)"
-    eval "$mysql_cmd" < "$file"
+    build_mysql_args
+    "${MYSQL_ARGS[@]}" < "$file"
 }
 
 # ============================================================
@@ -149,23 +215,27 @@ run_sql_file() {
 # ============================================================
 run_interactive() {
     log_info "进入交互模式，输入 exit 或按 Ctrl+D 退出"
-    local mysql_cmd
-    mysql_cmd="$(build_mysql_cmd)"
-    eval "$mysql_cmd"
+    build_mysql_args
+    "${MYSQL_ARGS[@]}"
 }
 
 # ============================================================
-# 打印当前隧道端口（方便外部直连）
+# 打印连接信息
 # ============================================================
-print_tunnel_info() {
+print_connection_info() {
     echo ""
-    log_info "隧道信息:"
-    echo "  本地地址: 127.0.0.1:$LOCAL_PORT"
-    echo "  远程地址: $MYSQL_HOST:$MYSQL_PORT"
-    echo "  数据库:   ${MYSQL_DB:-(未指定)}"
-    if [[ -n "${SSH_PID:-}" ]]; then
-        echo "  SSH PID:  $SSH_PID"
+    if [[ "$MYSQL_CONNECT_MODE" == "tunnel" ]]; then
+        log_info "隧道信息:"
+        echo "  本地地址: 127.0.0.1:$LOCAL_PORT"
+        echo "  远程地址: $MYSQL_HOST:$MYSQL_PORT"
+        if [[ -n "${SSH_PID:-}" ]]; then
+            echo "  SSH PID:  $SSH_PID"
+        fi
+    else
+        log_info "直连信息:"
+        echo "  MySQL 地址: $MYSQL_HOST:$MYSQL_PORT"
     fi
+    echo "  数据库:   ${MYSQL_DB:-(未指定)}"
     echo ""
 }
 
@@ -173,16 +243,25 @@ print_tunnel_info() {
 # 主流程
 # ============================================================
 main() {
-    check_config
-    start_tunnel
-
     local sql_file=""
     local sql_cmd=""
     local db_override=""
+    local mysql_host_override=""
+    local mysql_port_override=""
+    local mysql_user_override=""
+    local mysql_pass_override=""
 
     # 解析参数
     while [[ $# -gt 0 ]]; do
         case "$1" in
+            --direct)
+                MYSQL_CONNECT_MODE="direct"
+                shift
+                ;;
+            --tunnel)
+                MYSQL_CONNECT_MODE="tunnel"
+                shift
+                ;;
             -f|--file)
                 sql_file="$2"
                 shift 2
@@ -195,6 +274,22 @@ main() {
                 LOCAL_PORT="$2"
                 shift 2
                 ;;
+            --mysql-host)
+                mysql_host_override="$2"
+                shift 2
+                ;;
+            --mysql-port)
+                mysql_port_override="$2"
+                shift 2
+                ;;
+            --mysql-user)
+                mysql_user_override="$2"
+                shift 2
+                ;;
+            --mysql-pass)
+                mysql_pass_override="$2"
+                shift 2
+                ;;
             -h|--help)
                 echo "用法: $0 [选项] [SQL语句]"
                 echo ""
@@ -202,6 +297,12 @@ main() {
                 echo "  -f, --file <file>     执行 SQL 文件"
                 echo "  -d, --database <db>   指定数据库"
                 echo "  -p, --port <port>     本地隧道端口 (默认 3307)"
+                echo "      --direct          直连 MySQL（不建立 SSH 隧道）"
+                echo "      --tunnel          强制使用 SSH 隧道（默认）"
+                echo "      --mysql-host <h>  覆盖 MYSQL_HOST"
+                echo "      --mysql-port <p>  覆盖 MYSQL_PORT"
+                echo "      --mysql-user <u>  覆盖 MYSQL_USER"
+                echo "      --mysql-pass <p>  覆盖 MYSQL_PASS（留空则交互输入更安全）"
                 echo "  -h, --help            帮助信息"
                 echo ""
                 echo "示例:"
@@ -209,6 +310,7 @@ main() {
                 echo "  $0 'SELECT 1'                  执行单条 SQL"
                 echo "  $0 -f ./migration.sql          执行 SQL 文件"
                 echo "  $0 -d mydb 'SHOW TABLES'       指定库执行"
+                echo "  $0 --direct --mysql-host 127.0.0.1 --mysql-user root 'SELECT 1'"
                 exit 0
                 ;;
             -*)
@@ -223,8 +325,18 @@ main() {
     done
 
     [[ -n "$db_override" ]] && MYSQL_DB="$db_override"
+    [[ -n "$mysql_host_override" ]] && MYSQL_HOST="$mysql_host_override"
+    [[ -n "$mysql_port_override" ]] && MYSQL_PORT="$mysql_port_override"
+    [[ -n "$mysql_user_override" ]] && MYSQL_USER="$mysql_user_override"
+    [[ -n "$mysql_pass_override" ]] && MYSQL_PASS="$mysql_pass_override"
 
-    print_tunnel_info
+    check_config
+
+    if [[ "$MYSQL_CONNECT_MODE" == "tunnel" ]]; then
+        start_tunnel
+    fi
+
+    print_connection_info
 
     if [[ -n "$sql_file" ]]; then
         run_sql_file "$sql_file"

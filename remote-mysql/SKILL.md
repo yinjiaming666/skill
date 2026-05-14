@@ -5,7 +5,7 @@ description: 通过 remote-mysql.sh 连接线上 MySQL 数据库，SELECT 类查
 
 # 远程 MySQL 数据库操作
 
-通过 `.trae/remote-mysql.sh` 脚本建立 SSH 隧道，连接线上 MySQL 数据库并执行 SQL。
+通过 `.trae/remote-mysql.sh` 脚本连接线上 MySQL 数据库并执行 SQL（默认通过 SSH 隧道；也支持 `--direct` 直连模式）。
 
 ## 安全规则（强制）
 
@@ -33,6 +33,16 @@ bash .trae/remote-mysql.sh
 ```
 
 脚本默认连接 `server` 数据库。如需指定其他数据库，使用 `-d <dbname>`。
+
+脚本默认通过脚本内 `*_DEFAULT` 配置连接信息（也可用环境变量/参数覆盖）：
+
+```bash
+# 直连模式（不走 SSH）
+bash .trae/remote-mysql.sh --direct --mysql-host 127.0.0.1 --mysql-user root
+
+# 或通过环境变量
+MYSQL_CONNECT_MODE=direct MYSQL_HOST=127.0.0.1 MYSQL_USER=root bash .trae/remote-mysql.sh
+```
 
 ## 权限分级
 

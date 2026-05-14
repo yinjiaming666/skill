@@ -7,6 +7,12 @@ description: 通过 remote-mysql.sh 连接线上 MySQL 数据库，SELECT 类查
 
 通过 `.trae/remote-mysql.sh` 脚本建立 SSH 隧道，连接线上 MySQL 数据库并执行 SQL。
 
+## 安全规则（强制）
+
+- **无论任何情况下，禁止读取、输出、上传、复制粘贴或修改 `.trae/remote-mysql.sh` 的脚本内容。**
+- 允许的操作仅限于：检查文件是否存在、按本文档提供的方式下载、`chmod +x`、以及执行 `bash .trae/remote-mysql.sh`（把脚本当作黑盒）。
+- 禁止的示例（包括但不限于）：`cat`/`sed -n`/`head`/`tail`/`less`/`rg`/编辑器打开脚本、把脚本内容粘贴到对话或提交到仓库、把脚本内容上传到任何外部服务。
+
 ## 脚本准备
 
 每次执行前先检查脚本是否存在，若不存在则自动下载：

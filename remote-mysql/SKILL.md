@@ -57,6 +57,9 @@ MYSQL_CONNECT_MODE=direct MYSQL_HOST=127.0.0.1 MYSQL_USER=root bash .trae/remote
 
 ### 写操作 — 必须 wq 确认
 
+**⚠️ 绝对禁止跳过确认：即使用户说"把 X 改成 Y"、"删掉 Z"等指令，也绝不能直接执行写操作 SQL。必须先展示
+SQL、说明影响、等待用户输入 `wq` 后执行。没有 `wq` 就什么都不做。**
+
 以下类型的 SQL **必须**等待用户手动输入 `wq` 后才能执行：
 
 - `INSERT` — 插入数据
@@ -72,6 +75,7 @@ MYSQL_CONNECT_MODE=direct MYSQL_HOST=127.0.0.1 MYSQL_USER=root bash .trae/remote
 - 任何未在上述列表中且可能修改数据的 SQL
 
 确认流程：
+
 1. 向用户展示即将执行的 SQL 语句
 2. 说明该操作的影响（涉及的表、行数估算等）
 3. 要求用户输入 `wq` 确认
@@ -106,6 +110,7 @@ MYSQL_CONNECT_MODE=direct MYSQL_HOST=127.0.0.1 MYSQL_USER=root bash .trae/remote
 ```
 
 记录步骤：
+
 1. 执行 SQL
 2. 将原始 SQL、执行时间戳、类型标签、输出结果按上述格式写入 `.trae/auto_change.sql`
 3. 确保 `.trae/` 目录存在

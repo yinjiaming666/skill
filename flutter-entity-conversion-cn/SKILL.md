@@ -1,6 +1,6 @@
 ---
 name: flutter-entity-conversion-cn
-description: 中文 Flutter 响应实体类转换与 JSON 解析规范。用于在 Flutter/Dart 项目中根据后端 JSON 或 .api 契约创建、修改、评审响应实体，使用 FlutterJsonBeanFactory 风格生成主实体、generated/json 辅助文件、RespEntity/ListRespEntity/PageRespEntity 响应包装对象、泛型解析和服务层调用示例；如果项目缺少这些响应包装对象，必须先按本 skill 模板生成。
+description: 中文 Flutter 响应实体类转换与 JSON 解析规范。用于在 Flutter/Dart 项目中根据后端 JSON 或 .api 契约创建、修改、评审响应实体，复用项目模板内置的 RespEntity/ListRespEntity/PageRespEntity 响应包装对象，并按 FlutterJsonBeanFactory 风格生成主实体、generated/json 辅助文件、泛型解析和服务层调用示例。
 ---
 
 # Flutter 实体类转换规范
@@ -13,280 +13,29 @@ description: 中文 Flutter 响应实体类转换与 JSON 解析规范。用于�
 
 ## 文件放置
 
-- 生成业务实体前，先检查 `lib/model/response/resp_entity.dart`、`lib/model/response/list_resp_entity.dart`、`lib/model/response/page_resp_entity.dart` 是否存在。
-- 同时检查 `lib/generated/json/base/resp_entity.base.dart`、`lib/generated/json/base/list_resp_entity.dart`、`lib/generated/json/base/page_resp_entity.dart` 是否存在。
-- 如果缺少 `RespEntity`、`ListRespEntity`、`PageRespEntity` 或上述任意 base 文件，必须先按“响应包装对象示例”创建，再生成具体业务实体。
+- 项目模板已内置响应包装对象，不在本 skill 中重新定义或初始化这些基础文件。
+- 业务开发时默认复用以下模板文件：
+  - `lib/model/response/resp_entity.dart`
+  - `lib/model/response/list_resp_entity.dart`
+  - `lib/model/response/page_resp_entity.dart`
+  - `lib/model/response/page_data_impl.dart`
+  - `lib/generated/json/base/resp_entity.base.dart`
+  - `lib/generated/json/base/list_resp_entity.dart`
+  - `lib/generated/json/base/page_resp_entity.dart`
 - 主实体放在 `lib/model/response/` 或业务子目录，例如 `lib/model/response/amount_log_entity.dart`。
-- 生成文件放在 `lib/generated/json/`，文件名与主实体对应，例如 `amount_log_entity.g.dart`。
+- 业务实体的生成文件放在 `lib/generated/json/`，文件名与主实体对应，例如 `amount_log_entity.g.dart`。
 - `generated/json/base/json_field.dart`、`generated/json/base/json_convert_content.dart` 由 FlutterJsonBeanFactory 维护，不手写。
-- 若实体属于列表或分页接口，服务层解析时复用项目已有响应包装类，不在页面里直接解析原始 `Map`。
+- 若实体属于列表或分页接口，服务层解析时复用模板提供的响应包装类，不在页面里直接解析原始 `Map`。
 
-## 响应包装对象示例
+## 模板内置响应对象使用约定
 
-如果当前项目没有以下对象和 generated/base 文件，先创建这些文件。示例 import 默认固定使用 `package:app`。
+模板中的响应包装对象只作为统一解析入口使用，新增业务实体时不要复制这些基础类，也不要为单个接口另建重复的响应包装结构。
 
-`lib/model/response/resp_entity.dart`：
-
-```dart
-import 'dart:convert';
-
-import 'package:app/generated/json/base/resp_entity.base.dart';
-
-class RespEntity<T> {
-  int? code;
-  T? data;
-  String? msg;
-
-  RespEntity();
-
-  factory RespEntity.fromJson(Map<String, dynamic> json) => $RespEntityFromJson<T>(json);
-
-  Map<String, dynamic> toJson() => $RespEntityToJson(this);
-
-  @override
-  String toString() {
-    return jsonEncode(this);
-  }
-}
-```
-
-`lib/generated/json/base/resp_entity.base.dart`：
-
-```dart
-import 'package:app/generated/json/base/json_convert_content.dart';
-import 'package:app/model/response/resp_entity.dart';
-
-RespEntity<T> $RespEntityFromJson<T>(Map<String, dynamic> json) {
-  final RespEntity<T> respEntity = RespEntity<T>();
-  final int? code = jsonConvert.convert<int>(json['code']);
-  if (code != null) {
-    respEntity.code = code;
-  }
-  final T? data = jsonConvert.convert<T>(json['data']);
-  if (data != null) {
-    respEntity.data = data;
-  }
-  final String? msg = jsonConvert.convert<String>(json['msg']);
-  if (msg != null) {
-    respEntity.msg = msg;
-  }
-  return respEntity;
-}
-
-Map<String, dynamic> $RespEntityToJson(RespEntity entity) {
-  final Map<String, dynamic> data = <String, dynamic>{};
-  data['code'] = entity.code;
-  data['data'] = entity.data?.toJson();
-  data['msg'] = entity.msg;
-  return data;
-}
-
-extension RespEntityExtension on RespEntity {
-  RespEntity copyWith({
-    int? code,
-    dynamic data,
-    String? msg,
-  }) {
-    return RespEntity()
-      ..code = code ?? this.code
-      ..data = data ?? this.data
-      ..msg = msg ?? this.msg;
-  }
-}
-```
-
-`lib/model/response/list_resp_entity.dart`：
-
-```dart
-import 'dart:convert';
-
-import 'package:app/generated/json/base/list_resp_entity.dart';
-
-class ListRespEntity<T> {
-  int code = 0;
-  String msg = '';
-  String time = '';
-  List<T> data = [];
-
-  ListRespEntity();
-
-  factory ListRespEntity.fromJson(Map<String, dynamic> json) => $ListRespEntityFromJson<T>(json);
-
-  Map<String, dynamic> toJson() => $ListRespEntityToJson(this);
-
-  @override
-  String toString() {
-    return jsonEncode(this);
-  }
-}
-```
-
-`lib/generated/json/base/list_resp_entity.dart`：
-
-```dart
-import 'package:app/generated/json/base/json_convert_content.dart';
-import 'package:app/model/response/list_resp_entity.dart';
-
-ListRespEntity<T> $ListRespEntityFromJson<T>(Map<String, dynamic> json) {
-  final ListRespEntity<T> listRespEntity = ListRespEntity<T>();
-  final int? code = jsonConvert.convert<int>(json['code']);
-  if (code != null) {
-    listRespEntity.code = code;
-  }
-  final String? msg = jsonConvert.convert<String>(json['msg']);
-  if (msg != null) {
-    listRespEntity.msg = msg;
-  }
-  final String? time = jsonConvert.convert<String>(json['time']);
-  if (time != null) {
-    listRespEntity.time = time;
-  }
-  final List<T>? data = (json['data'] as List<dynamic>?)?.map((e) => jsonConvert.convert<T>(e) as T).toList();
-  if (data != null) {
-    listRespEntity.data = data;
-  }
-  return listRespEntity;
-}
-
-Map<String, dynamic> $ListRespEntityToJson(ListRespEntity entity) {
-  final Map<String, dynamic> data = <String, dynamic>{};
-  data['code'] = entity.code;
-  data['msg'] = entity.msg;
-  data['time'] = entity.time;
-  data['data'] = entity.data.map((v) => v.toJson()).toList();
-  return data;
-}
-```
-
-`lib/model/response/page_data_impl.dart`：
-
-```dart
-abstract class PageDataImpl {
-  getList();
-
-  getTotal();
-}
-```
-
-`lib/model/response/page_resp_entity.dart`：
-
-```dart
-import 'dart:convert';
-
-import 'package:app/generated/json/base/json_field.dart';
-import 'package:app/generated/json/base/page_resp_entity.dart';
-import 'package:app/model/response/page_data_impl.dart';
-
-class PageRespEntity<T> {
-  int? code;
-  late PageData<T> data;
-  String? msg;
-
-  PageRespEntity();
-
-  factory PageRespEntity.fromJson(Map<String, dynamic> json) => $PageRespEntityFromJson<T>(json);
-
-  Map<String, dynamic> toJson() => $PageRespEntityToJson(this);
-
-  @override
-  String toString() {
-    return jsonEncode(this);
-  }
-}
-
-class PageData<T> implements PageDataImpl {
-  int total = 0;
-  @JSONField(name: 'per_page')
-  int perPage = 0;
-  @JSONField(name: 'current_page')
-  int currentPage = 0;
-  @JSONField(name: 'last_page')
-  int lastPage = 0;
-  List<T> data = [];
-
-  PageData();
-
-  factory PageData.fromJson(Map<String, dynamic> json) => $PageDataFromJson<T>(json);
-
-  Map<String, dynamic> toJson() => $PageDataToJson(this);
-
-  @override
-  getList() {
-    return data;
-  }
-
-  @override
-  getTotal() {
-    return total;
-  }
-}
-```
-
-`lib/generated/json/base/page_resp_entity.dart`：
-
-```dart
-import 'package:app/generated/json/base/json_convert_content.dart';
-import 'package:app/model/response/page_resp_entity.dart';
-
-PageRespEntity<T> $PageRespEntityFromJson<T>(Map<String, dynamic> json) {
-  final PageRespEntity<T> pageRespEntity = PageRespEntity<T>();
-  final int? code = jsonConvert.convert<int>(json['code']);
-  if (code != null) {
-    pageRespEntity.code = code;
-  }
-  final String? msg = jsonConvert.convert<String>(json['msg']);
-  if (msg != null) {
-    pageRespEntity.msg = msg;
-  }
-
-  final PageData<T> data = PageData.fromJson(json['data']);
-  pageRespEntity.data = data;
-  return pageRespEntity;
-}
-
-Map<String, dynamic> $PageRespEntityToJson(PageRespEntity entity) {
-  final Map<String, dynamic> data = <String, dynamic>{};
-  data['code'] = entity.code;
-  data['msg'] = entity.msg;
-  data['data'] = entity.data;
-  return data;
-}
-
-PageData<T> $PageDataFromJson<T>(Map<String, dynamic> json) {
-  final PageData<T> respEntity = PageData<T>();
-  final int? total = jsonConvert.convert<int>(json['total']);
-  if (total != null) {
-    respEntity.total = total;
-  }
-  final List<T>? data = (json['data'] as List<dynamic>?)?.map((e) => jsonConvert.convert<T>(e) as T).toList();
-  if (data != null) {
-    respEntity.data = data;
-  }
-  final int? currentPage = jsonConvert.convert<int>(json['current_page']);
-  if (currentPage != null) {
-    respEntity.currentPage = currentPage;
-  }
-  final int? lastPage = jsonConvert.convert<int>(json['last_page']);
-  if (lastPage != null) {
-    respEntity.lastPage = lastPage;
-  }
-  final int? perPage = jsonConvert.convert<int>(json['per_page']);
-  if (perPage != null) {
-    respEntity.perPage = perPage;
-  }
-  return respEntity;
-}
-
-Map<String, dynamic> $PageDataToJson(PageData entity) {
-  final Map<String, dynamic> data = <String, dynamic>{};
-  data['data'] = entity.data.map((v) => v.toJson()).toList();
-  data['total'] = entity.total;
-  data['current_page'] = entity.currentPage;
-  data['last_page'] = entity.lastPage;
-  data['per_page'] = entity.perPage;
-  return data;
-}
-```
+- `RespEntity<T>`：用于 `data` 是单个对象、基础值或可空结果的接口。
+- `ListRespEntity<T>`：用于 `data` 是数组的接口。
+- `PageRespEntity<T>` / `PageData<T>`：用于 `data` 包含分页字段和列表数据的接口。
+- `PageData<T>` 已实现 `PageDataImpl`，页面或通用列表组件需要统一读取列表和总数时，直接使用 `getList()` / `getTotal()` 或访问 `data` / `total`。
+- generated/base 中的响应包装辅助文件属于模板基础设施；只有模板升级或 FlutterJsonBeanFactory 重新生成时才同步修改，不在业务实体任务中手写。
 
 ## 主实体示例
 
@@ -439,7 +188,7 @@ Future<void> _loadAmountLog() async {
 
 ## 检查清单
 
-- 生成业务实体前，已确认 `RespEntity`、`ListRespEntity`、`PageRespEntity` 及对应 generated/base 文件存在；缺失时已先生成这些响应包装对象和 base 文件。
+- 业务实体复用项目模板内置的 `RespEntity`、`ListRespEntity`、`PageRespEntity` 及对应 generated/base 文件，不在业务任务中重复初始化这些基础对象。
 - 主实体 import、类名、生成函数名、文件名保持一致。
 - 后端下划线字段必须用 `@JSONField` 映射。
 - 生成文件与主实体字段同步，不提交过期辅助文件。

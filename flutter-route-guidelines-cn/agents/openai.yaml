@@ -1,0 +1,7 @@
+interface:
+  display_name: "Flutter 路由规范"
+  short_description: "Flutter Fluro 路由配置与跳转参数模板规范"
+  default_prompt: "使用 $flutter-route-guidelines-cn 新增 Flutter 路由并完成带参数跳转。"
+
+policy:
+  allow_implicit_invocation: true

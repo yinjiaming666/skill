@@ -20,6 +20,19 @@ description: 辅助基于 ThinkPHP 框架的项目开发，涵盖 MySQL 数据�
   - 类的属性**必须**进行强类型声明，以保障数据结构的确定性。示例：`public array $user;`
   - 所有的类方法与函数**必须**显式声明参数类型与返回值类型。
   - 若方法无返回值，则必须显式声明为 `:void`，以提升代码的严谨性与可读性。示例：`public function getUserInfo(int $userId): array`
+- **类型强制转换**:
+  - 当变量为对象，且对象的属性已通过 PHPDoc `@property` 注释、强类型声明或模型 `$type` 映射明确了类型时，**严禁**在业务代码中重复进行强制类型转换，此类写法不仅冗余，还会掩盖已有的类型声明、稀释类型契约的权威性。示例：
+    ```php
+    /** @var Coupon $coupon */
+    $coupon = model(Coupon::class);
+
+    $id = $coupon->id;           // ✅ 模型已通过 @property int $id 声明类型
+    $id = (int)$coupon->id;      // ❌ 冗余强制转换
+    $price = (float)$coupon->price; // ❌ 冗余，应由模型 $type 映射负责
+    ```
+  - 仅在变量来源不可信（如用户输入 `request->post()` 返回值、JSON 解码结果、数据库原生 array 行、`$_GET`/`$_POST` 等）或类型未声明时，才允许使用强制转换。
+  - 通过 `model()` 助手或 `Model::get()` / `Model::find()` / `Model::select()` 等方式获取的对象，属性类型以模型类 `@property` 注释和 `$type` 映射为准，业务代码不应再叠加 `(int)` / `(string)` / `(float)` / `(bool)` 转换。
+  - 若发现模型属性读取后必须强制转换才能得到正确类型，应优先补全模型 `$type` 映射和 `@property` 注释，而不是在调用方堆砌转换。
 - **严格比较**:
   - 条件判断必须使用强类型比较运算符 `===` 或 `!==`，杜绝隐式类型转换带来的逻辑漏洞。
 - **变量与方法注释 (PHPDoc)**:
@@ -62,6 +75,39 @@ description: 辅助基于 ThinkPHP 框架的项目开发，涵盖 MySQL 数据�
     /** @var GameModel $game */
     $game = model(GameModel::class);
     ```
+- **模型类型映射 (`$type`)**:
+  - 模型类**必须**通过 `protected $type` 属性声明字段的自动类型转换，确保从数据库读取的属性值在 PHP 层面具有明确类型，避免业务代码为每个属性读取重复编写 `(int)$model->id`、`(float)$model->price` 之类的强制转换。参考 [ThinkPHP 5 类型自动转换](https://www.kancloud.cn/manual/thinkphp5/138669)。
+  - 声明示例：
+    ```php
+    class Product extends Model
+    {
+        protected $name = 'product';
+        protected $autoWriteTimestamp = 'int';
+        protected $createTime = 'createtime';
+        protected $updateTime = 'updatetime';
+
+        protected $type = [
+            'id'           => 'integer',
+            'store_id'     => 'integer',
+            'category_id'  => 'integer',
+            'price_min'    => 'float',
+            'price_max'    => 'float',
+            'stock'        => 'integer',
+            'sales'        => 'integer',
+            'spec_type'    => 'integer',
+            'weigh'        => 'integer',
+            'is_recommend' => 'integer',
+            'is_new'       => 'integer',
+            'is_hot'       => 'integer',
+            'createtime'   => 'integer',
+            'updatetime'   => 'integer',
+        ];
+    }
+    ```
+  - `@property` 注释中的字段类型**必须**与 `$type` 映射保持一致，避免 IDE 提示与运行时类型产生分歧。
+  - 支持 ThinkPHP 5 内建类型：`integer` / `float` / `boolean` / `string` / `array` / `json` / `serialize` / `datetime` / `timestamp` 等。金额、重量、体积等 DECIMAL 字段，统一映射为 `string`（保留精度）或 `float`（按业务需要），需在 `@property` 中与之对应。
+  - 一旦模型完成 `$type` 声明，业务代码读取属性时**严禁**再叠加冗余强制转换（参见 §1 "类型强制转换" 小节）。
+  - 仅写入场景（`save` / `create` / `insert`）需要绕过类型映射时，可通过 `$data` 数组直接传值；读取场景应一律依赖模型属性类型。
 - **特殊字段与组件约定**:
   - `weigh`: 权重排序字段
   - `create_time`/`update_time`: 框架自动维护的时间戳字段

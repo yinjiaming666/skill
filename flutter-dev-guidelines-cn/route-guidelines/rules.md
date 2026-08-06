@@ -1,13 +1,6 @@
----
-name: flutter-route-guidelines-cn
-description: 中文 Flutter 路由配置与跳转规范。用于在 Flutter/Dart 项目中新增或修改 fluro 路由、Routes 路径、router.define、RouterHelper 跳转、无 context 跳转、返回、RouteSettings.arguments 参数传递、readArguments 参数读取、MaterialApp/PiPMaterialApp 路由接入时，按本项目模板生成可直接参考的代码。
----
+# 路由规范
 
-# Flutter 路由规范
-
-## 基本原则
-
-涉及路由路径、页面注册、页面跳转、清栈跳转、替换跳转、无 `context` 跳转、返回传参、页面参数读取时使用本 skill。
+本文件是 flutter-dev-guidelines-cn 的路由细则，由 SKILL.md「路由规范」章节引用。涉及路由路径、页面注册、页面跳转、清栈跳转、替换跳转、无 `context` 跳转、返回传参、页面参数读取时按本文件执行。
 
 本项目路由基于 `fluro`，统一在 `lib/router.dart` 中维护 `Routes`，跳转统一使用 `lib/tool/route_helper.dart` 的 `RouterHelper`。示例 import 默认固定使用 `package:app`。
 
@@ -289,4 +282,3 @@ router.define(
 - 跳转方使用 `RouterHelper.push`、`switchTab`、`pushWithNoContext` 或 `back`。
 - 参数 key 在跳转方和 `readArguments<T>` 读取方完全一致。
 - 异步回调后跳转前检查 `context.mounted`。
-- 完成后运行 `dart format .` 和 `flutter analyze`；若只改 skill 文档，校验 YAML 即可。

@@ -1,7 +1,0 @@
-interface:
-  display_name: "Flutter 实体转换"
-  short_description: "复用模板响应包装对象生成 Flutter 业务实体"
-  default_prompt: "使用 $flutter-entity-conversion-cn 复用模板内置响应包装对象，并根据后端 JSON 生成 Flutter 业务实体。"
-
-policy:
-  allow_implicit_invocation: true

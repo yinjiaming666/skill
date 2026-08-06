@@ -1,19 +1,16 @@
----
-name: flutter-entity-conversion-cn
-description: 中文 Flutter 响应实体类转换与 JSON 解析规范。用于在 Flutter/Dart 项目中根据后端 JSON 或 .api 契约创建、修改、评审响应实体，复用项目模板内置的 RespEntity/ListRespEntity/PageRespEntity 响应包装对象，并按 FlutterJsonBeanFactory 风格生成主实体、generated/json 辅助文件、泛型解析和服务层调用示例。
----
+# 实体类转换规范
 
-# Flutter 实体类转换规范
+本文件是 flutter-dev-guidelines-cn 的实体类转换细则，由 SKILL.md「实体类转换」章节引用。涉及后端响应实体、JSON 字段映射、泛型响应解析、列表响应、分页响应时按本文件执行。
 
 ## 基本原则
 
-涉及后端响应实体、JSON 字段映射、泛型响应解析、列表响应、分页响应时使用本 skill。实现前先读取 `.api` 契约和相邻实体文件，优先复用项目现有 `RespEntity<T>`、`ListRespEntity<T>`、`PageRespEntity<T>`、`@JsonSerializable()`、`@JSONField` 风格。
+实现前先读取 `.api` 契约和相邻实体文件，优先复用项目现有 `RespEntity<T>`、`ListRespEntity<T>`、`PageRespEntity<T>`、`@JsonSerializable()`、`@JSONField` 风格。
 
 本项目实体模板参考 `lib/model/response/amount_log_entity.dart`，import 默认固定使用 `package:app`。
 
 ## 文件放置
 
-- 项目模板已内置响应包装对象，不在本 skill 中重新定义或初始化这些基础文件。
+- 项目模板已内置响应包装对象，不重新定义或初始化这些基础文件。
 - 业务开发时默认复用以下模板文件：
   - `lib/model/response/resp_entity.dart`
   - `lib/model/response/list_resp_entity.dart`
@@ -87,7 +84,7 @@ class AmountEntity {
 
 ## 生成文件示例
 
-生成文件由 FlutterJsonBeanFactory 生成。Codex 不手写这类文件，但评审或排查时按以下结构核对：
+生成文件由 FlutterJsonBeanFactory 生成。不手写这类文件，但评审或排查时按以下结构核对：
 
 ```dart
 import 'package:app/generated/json/base/json_convert_content.dart';
@@ -194,4 +191,3 @@ Future<void> _loadAmountLog() async {
 - 生成文件与主实体字段同步，不提交过期辅助文件。
 - 服务层统一解析响应并处理失败提示，页面层只消费类型化结果。
 - 涉及接口新增或变更时，同步 `.api` 契约。
-- 完成后运行 `dart format .` 和 `flutter analyze`；若只改 skill 文档，校验 YAML 即可。
